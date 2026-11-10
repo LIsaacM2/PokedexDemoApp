@@ -1,0 +1,26 @@
+version: '3.8'
+
+services:
+  # Servicio correspondiente al Backend de la PokéDex
+  backend:
+    build: ./backend
+    ports:
+      - "3000:3000"
+    environment:
+      - PORT=3000
+      # Conexión apuntando al servicio de MongoDB definido abajo dentro de la red de Docker
+      - MONGO_URI=mongodb://mongo:27017/pokedex_db
+    depends_on:
+      - mongo
+
+  # Servicio de la Base de Datos MongoDB
+  mongo:
+    image: mongo:latest
+    ports:
+      - "27017:27017"
+    volumes:
+      # Volumen persistente para asegurar que los datos no se pierdan al apagar el contenedor
+      - mongo_data:/data/db
+
+volumes:
+  mongo_data:

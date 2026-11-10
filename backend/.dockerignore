@@ -1,0 +1,11 @@
+# Excluimos dependencias locales para que no pesen en la imagen
+node_modules
+
+# Archivos de registro y depuración de NPM
+npm-debug.log
+
+# Variables de entorno locales (se deben configurar mediante Docker Compose)
+.env
+
+# Historial y archivos internos de control de versiones Git
+.git
