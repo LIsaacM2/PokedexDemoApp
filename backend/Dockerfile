@@ -1,11 +1,11 @@
-FROM node:18-alpine
+FROM node:22-bookworm-slim
 
 WORKDIR /app
 
 # Separar manifiestos y código permite reutilizar la capa de dependencias cuando cambia el código.
 COPY package*.json ./
 
-RUN npm install
+RUN npm ci --omit=dev
 
 COPY . .
 

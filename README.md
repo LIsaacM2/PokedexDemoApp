@@ -7,6 +7,7 @@ Aplicación web responsiva para explorar Pokémon y mantener una colección pers
 - Node.js 20.19+ o 22.12+.
 - MongoDB local o una instancia accesible mediante `MONGO_URI`.
 - Acceso a internet para consultar PokéAPI y cargar sprites.
+- Docker Engine o Docker Desktop con Docker Compose v2 para el modo contenedorizado.
 
 ## Instalación y ejecución
 
@@ -47,18 +48,21 @@ npm run build
 
 ## Docker
 
-La configuración actual de Compose levanta el backend y MongoDB:
+Compose levanta el frontend, el backend y MongoDB. El frontend se sirve con Nginx y reenvía `/api` y `/auth` al backend dentro de la red de Docker.
 
 ```powershell
+$env:JWT_SECRET = [guid]::NewGuid().ToString('N')
 docker compose up --build
 ```
 
-- Backend: `http://localhost:3000`.
+- Frontend: `http://localhost:5173`.
+- Backend: `http://localhost:3000` (acceso directo; el navegador usa el proxy de Nginx).
 - MongoDB: `mongodb://localhost:27017/pokedex_db`.
 - Los datos de MongoDB se conservan en el volumen `mongo_data`.
+- Para crear la cuenta y colección demo, ejecuta una vez `docker compose exec backend npm run seed:demo`.
 - Para detener los servicios: `docker compose down`. Para borrar también los datos persistidos: `docker compose down -v`.
 
-**Integración pendiente:** el frontend todavía no tiene un servicio Docker. Además, su cliente HTTP apunta a `http://localhost:5000`, mientras Compose publica el backend en `3000`; Compose tampoco pasa `JWT_SECRET` al contenedor. Por lo tanto, backend y MongoDB pueden iniciar, pero el flujo completo de autenticación desde el frontend requiere alinear el puerto y pasar un secreto JWT al servicio backend. La ejecución local documentada arriba sí inicia el backend en el puerto `5000`.
+`JWT_SECRET` es obligatorio y se inyecta desde el entorno de la terminal; usa un valor privado y estable mientras existan tokens activos. No guardes este secreto en el repositorio. La imagen del frontend compila `VITE_API_BASE_URL=/`, y Nginx enruta esas llamadas al backend.
 
 ## Cuenta de demostración
 

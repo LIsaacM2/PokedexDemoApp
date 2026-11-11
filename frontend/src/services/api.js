@@ -2,7 +2,7 @@ import axios from 'axios';
 
 // Cliente único del backend para compartir URL y autenticación entre páginas.
 const api = axios.create({
-  baseURL: 'http://localhost:5000',
+  baseURL: import.meta.env.VITE_API_BASE_URL || 'http://localhost:5000',
 });
 
 // Adjunta el JWT de la sesión a cada llamada a las rutas protegidas del backend.

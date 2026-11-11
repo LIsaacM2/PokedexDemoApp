@@ -1,24 +1,46 @@
-version: '3.8'
-
 services:
   backend:
     build: ./backend
     ports:
       - "3000:3000"
     environment:
-      - PORT=3000
-      # El nombre del servicio funciona como hostname dentro de la red de Compose.
-      - MONGO_URI=mongodb://mongo:27017/pokedex_db
+      PORT: 3000
+      MONGO_URI: mongodb://mongo:27017/pokedex_db
+      # Se exige desde el entorno para no hornear secretos en la imagen.
+      JWT_SECRET: ${JWT_SECRET:?Define JWT_SECRET en el entorno antes de iniciar Docker Compose}
     depends_on:
-      - mongo
+      mongo:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD", "node", "-e", "require('http').get('http://127.0.0.1:3000/', response => process.exit(response.statusCode === 200 ? 0 : 1)).on('error', () => process.exit(1))"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 10s
+
+  frontend:
+    build:
+      context: ./frontend
+      args:
+        VITE_API_BASE_URL: /
+    ports:
+      - "5173:80"
+    depends_on:
+      backend:
+        condition: service_healthy
 
   mongo:
-    image: mongo:latest
+    image: mongo:7
     ports:
       - "27017:27017"
     volumes:
-      # Conserva la base al detener o recrear el contenedor.
       - mongo_data:/data/db
+    healthcheck:
+      test: ["CMD", "mongosh", "--quiet", "--eval", "db.adminCommand('ping').ok"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+      start_period: 10s
 
 volumes:
   mongo_data:
