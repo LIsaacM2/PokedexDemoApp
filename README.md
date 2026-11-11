@@ -51,18 +51,23 @@ npm run build
 Compose levanta el frontend, el backend y MongoDB. El frontend se sirve con Nginx y reenvía `/api` y `/auth` al backend dentro de la red de Docker.
 
 ```powershell
-$env:JWT_SECRET = [guid]::NewGuid().ToString('N')
-docker compose up --build
+$rng = [System.Security.Cryptography.RandomNumberGenerator]::Create()
+$bytes = New-Object byte[] 32
+$rng.GetBytes($bytes)
+$env:JWT_SECRET = [Convert]::ToBase64String($bytes)
+$rng.Dispose()
+Remove-Variable rng, bytes
+docker compose up --build -d
+docker compose exec backend npm run seed:demo
 ```
 
 - Frontend: `http://localhost:5173`.
-- Backend: `http://localhost:3000` (acceso directo; el navegador usa el proxy de Nginx).
+- Backend: `http://localhost:3000` (acceso directo; el navegador usa el proxy same-origin de Nginx).
 - MongoDB: `mongodb://localhost:27017/pokedex_db`.
 - Los datos de MongoDB se conservan en el volumen `mongo_data`.
-- Para crear la cuenta y colección demo, ejecuta una vez `docker compose exec backend npm run seed:demo`.
 - Para detener los servicios: `docker compose down`. Para borrar también los datos persistidos: `docker compose down -v`.
 
-`JWT_SECRET` es obligatorio y se inyecta desde el entorno de la terminal; usa un valor privado y estable mientras existan tokens activos. No guardes este secreto en el repositorio. La imagen del frontend compila `VITE_API_BASE_URL=/`, y Nginx enruta esas llamadas al backend.
+`JWT_SECRET` es obligatorio y se genera en la sesión actual de PowerShell; mantén esa sesión abierta para futuras operaciones Compose que necesiten interpolarlo. El secreto no se guarda en el repositorio ni se copia a las imágenes. La imagen del frontend compila `VITE_API_BASE_URL=/`, y Nginx enruta esas llamadas al backend. Compose espera que MongoDB y el backend estén saludables antes de iniciar el servicio dependiente.
 
 ## Cuenta de demostración
 
