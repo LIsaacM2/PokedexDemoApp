@@ -1,14 +1,14 @@
 const User = require('../models/User');
 const jwt = require('jsonwebtoken');
 
-// Expresión regular para validar: mínimo 8 caracteres, al menos una mayúscula, un número y un símbolo especial
+// Debe coincidir con la lista de requisitos que muestra el formulario de registro.
 const passwordRegex = /^(?=.*[A-Z])(?=.*\d)(?=.*[!@#$%^&*(),.?":{}|<>_\-+=[\]\/]).{8,}$/;
 
+// Firma tokens con el id de MongoDB; el cliente los presenta en las rutas protegidas.
 const generateToken = (id) => {
   return jwt.sign({ id }, process.env.JWT_SECRET, { expiresIn: '1d' });
 };
 
-// POST /auth/register
 const registerUser = async (req, res) => {
   try {
     const { name, username, email, password } = req.body;
@@ -96,7 +96,6 @@ const loginUser = async (req, res) => {
   }
 };
 
-// POST /auth/logout[cite: 1]
 const logoutUser = (req, res) => {
   res.status(200).json({ message: 'Sesión cerrada exitosamente' });
 };

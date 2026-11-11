@@ -1,5 +1,6 @@
 const jwt = require('jsonwebtoken');
 
+// Requiere un Bearer JWT válido y expone su id para aislar los datos por usuario.
 const protect = (req, res, next) => {
   let token;
   if (req.headers.authorization && req.headers.authorization.startsWith('Bearer')) {

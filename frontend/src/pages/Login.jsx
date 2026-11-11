@@ -4,6 +4,7 @@ import api from '../services/api';
 import pokedexIcon from '../assets/pokedexIcon.png';
 import registeringAnimation from '../assets/registeringAnimation.gif';
 
+// Reglas compartidas por el checklist en vivo y la validación antes del POST.
 const passwordRequirements = [
   { label: 'Al menos 8 caracteres', test: (value) => value.length >= 8 },
   { label: 'Una letra mayúscula', test: (value) => /[A-Z]/.test(value) },
@@ -12,6 +13,7 @@ const passwordRequirements = [
 ];
 
 export default function Login({ onLoginSuccess }) {
+  // El mismo formulario alterna entre alta e inicio de sesión.
   const [isRegistering, setIsRegistering] = useState(false);
   const [name, setName] = useState('');
   const [username, setUsername] = useState('');
@@ -21,7 +23,7 @@ export default function Login({ onLoginSuccess }) {
   const [success, setSuccess] = useState('');
   const [showRegistrationSuccess, setShowRegistrationSuccess] = useState(false);
 
-  // Regex para validar los requisitos de la contraseña
+  // El servidor vuelve a validar estos requisitos; esta comprobación evita una solicitud inútil.
   const passwordRegex = /^(?=.*[A-Z])(?=.*\d)(?=.*[!@#$%^&*(),.?":{}|<>_\-+=[\]\x2f]).{8,}$/;
 
   const handleSubmit = async (e) => {
@@ -29,7 +31,6 @@ export default function Login({ onLoginSuccess }) {
     setError('');
     setSuccess('');
 
-    // Validar contraseña antes de enviar si está en modo registro
     if (isRegistering && !passwordRegex.test(password)) {
       setError('La contraseña debe tener al menos 8 caracteres, una mayúscula, un número y un signo especial (ej. ., !, @, #).');
       return;

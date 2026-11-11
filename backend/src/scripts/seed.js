@@ -3,12 +3,14 @@ const mongoose = require('mongoose');
 const connectDB = require('../config/db');
 const User = require('../models/User');
 
+// Datos mínimos para que la cuenta demo permita probar colección y detalles desde el primer inicio.
 const demoCollection = [
   { pokemonId: 25, pokemonName: 'pikachu' },
   { pokemonId: 6, pokemonName: 'charizard' }
 ];
 
 const seedDemoUser = async () => {
+  // Evita crear credenciales predecibles accidentalmente en un entorno desplegado.
   if (process.env.NODE_ENV === 'production') {
     throw new Error('El seed demo no se debe ejecutar en producción');
   }
@@ -28,6 +30,7 @@ const seedDemoUser = async () => {
     return;
   }
 
+  // Conserva entradas del esquema anterior y combina por id para que el seed sea repetible.
   const previousEntries = Array.isArray(rawUser?.collection) ? rawUser.collection : [];
   const entries = new Map(
     [...user.pokemonCollection, ...previousEntries, ...demoCollection]

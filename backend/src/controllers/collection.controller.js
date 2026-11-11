@@ -2,6 +2,7 @@ const axios = require('axios');
 const User = require('../models/User');
 
 const POKEE_API_BASE = 'https://pokeapi.co/api/v2';
+// Reutiliza datos de especie y Pokémon entre lecturas de colecciones dentro del proceso.
 const resourceCache = new Map();
 
 const getResource = async (url) => {
@@ -23,6 +24,7 @@ const localizedName = (names = [], language, fallback) => (
   || fallback
 );
 
+// Resuelve los datos de PokéAPI para las referencias persistidas del usuario autenticado.
 const getUserCollection = async (req, res) => {
   try {
     const user = await User.findById(req.user.id).select('pokemonCollection');
@@ -53,6 +55,7 @@ const getUserCollection = async (req, res) => {
   }
 };
 
+// Valida el id contra PokéAPI y evita duplicados antes de guardar la referencia en MongoDB.
 const addPokemonToCollection = async (req, res) => {
   try {
     const pokemonId = Number.parseInt(req.body.pokemonId, 10);
@@ -86,6 +89,7 @@ const addPokemonToCollection = async (req, res) => {
   }
 };
 
+// Elimina solo la entrada indicada del usuario autenticado y conserva el resto de su colección.
 const removePokemonFromCollection = async (req, res) => {
   try {
     const pokemonId = Number.parseInt(req.params.pokemonId, 10);

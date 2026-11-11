@@ -1,13 +1,17 @@
 const axios = require('axios');
 
+// Endpoint upstream único para que los controladores no dupliquen la URL de PokéAPI.
 const POKEE_API_BASE = 'https://pokeapi.co/api/v2';
+// Reutiliza promesas de recursos durante este proceso y evita descargas simultáneas duplicadas.
 const localizedResourceCache = new Map();
+// Relaciona cada variante regional con la generación y los juegos que habilitan sus evoluciones exclusivas.
 const regionalEvolutionRules = {
   alola: { generation: 'generation-vii', versionGroups: ['sun-moon', 'ultra-sun-ultra-moon'] },
   galar: { generation: 'generation-viii', versionGroups: ['sword-shield', 'the-isle-of-armor', 'the-crown-tundra'] },
   hisui: { generation: 'generation-viii', versionGroups: ['legends-arceus'] },
   paldea: { generation: 'generation-ix', versionGroups: ['scarlet-violet'] }
 };
+// Prefiere los iconos actuales de tipos y conserva compatibilidad con los recursos de Sword/Shield.
 const getTypeIcon = (typeData) => (
   typeData.sprites?.['generation-ix']?.['scarlet-violet']?.name_icon
   || typeData.sprites?.['generation-viii']?.['sword-shield']?.name_icon
@@ -15,19 +19,23 @@ const getTypeIcon = (typeData) => (
 );
 
 const getLocalizedResource = async (url, language) => {
+  // El idioma forma parte de la clave porque un mismo recurso puede tener varias etiquetas.
   const cacheKey = `${url}:${language}`;
   if (!localizedResourceCache.has(cacheKey)) {
+    // Guarda también la solicitud en curso para que peticiones paralelas compartan el mismo resultado.
     localizedResourceCache.set(cacheKey, axios.get(url).then(({ data }) => data));
   }
 
   try {
     return await localizedResourceCache.get(cacheKey);
   } catch (error) {
+    // Permite reintentar solicitudes fallidas en lugar de conservar un rechazo en caché.
     localizedResourceCache.delete(cacheKey);
     throw error;
   }
 };
 
+// Usa español regional antes del inglés cuando PokéAPI no incluye una traducción exacta para el idioma pedido.
 const getLocalizedName = (names = [], language, fallback) => (
   names.find(({ language: entryLanguage }) => entryLanguage.name === language)?.name
   || (language === 'es' && names.find(({ language: entryLanguage }) => entryLanguage.name === 'es-419')?.name)
@@ -40,7 +48,9 @@ const getAbilityName = (abilityData, language, fallback) => {
   return getLocalizedName(abilityData.names, language, fallback);
 };
 
+// Convierte cada detalle de evolución de PokéAPI en condiciones legibles para la ficha.
 const getEvolutionConditions = async (details, language, regionalSuffix) => {
+  // Las etiquetas se mantienen en el backend para enviar condiciones listas para presentar.
   const labels = language === 'es'
     ? {
         level: 'Nivel', item: 'Usar objeto', heldItem: 'Llevar objeto', trade: 'Intercambiar',
@@ -69,7 +79,9 @@ const getEvolutionConditions = async (details, language, regionalSuffix) => {
         genders: { 1: 'Female', 2: 'Male' }, physical: { '-1': 'Attack lower than Defense', 0: 'Attack equal to Defense', 1: 'Attack higher than Defense' }
       };
 
+  // PokéAPI mezcla requisitos de varios juegos dentro de la misma transición evolutiva.
   const galarConditions = details.filter(({ item }) => item?.name.startsWith('galarica-'));
+  // Las condiciones galarica no deben aparecer en la evolución de la forma de Kanto.
   const relevantDetails = galarConditions.length > 0
     ? regionalSuffix === 'galar' ? galarConditions : details.filter(({ item }) => !item?.name.startsWith('galarica-'))
     : details;
@@ -115,6 +127,7 @@ const getEvolutionConditions = async (details, language, regionalSuffix) => {
 };
 
 const getRegionalEvolutionSuffix = (sourceSpecies, targetSpecies, details) => {
+  // La fuente debe tener esa variedad y la transición pertenecer a la generación y juegos regionales.
   for (const [suffix, rule] of Object.entries(regionalEvolutionRules)) {
     const hasRegionalSource = sourceSpecies.varieties.some(({ pokemon }) => pokemon.name === `${sourceSpecies.name}-${suffix}`);
     const targetWasIntroducedInRegion = targetSpecies.generation.name === rule.generation;
@@ -126,12 +139,17 @@ const getRegionalEvolutionSuffix = (sourceSpecies, targetSpecies, details) => {
   return null;
 };
 
+// Proyecta la cadena de especies sobre sus variedades elegibles sin insertar Mega/Gigamax como evoluciones.
 const getEvolutionChain = async (species, language, selectedPokemonName) => {
+  // La API entrega una cadena por especie; el backend la ajusta a la forma consultada.
   const chainData = await getLocalizedResource(species.evolution_chain.url, language);
+  // Mega y Gigamax describen transformaciones de combate, no reemplazos de la especie base en su cadena.
   const isTransformation = /-(mega(?:-[xy])?|gmax)$/.test(selectedPokemonName);
+  // Se usa el sufijo para buscar la variedad equivalente en cada etapa de la línea regional.
   const formSuffix = selectedPokemonName.startsWith(`${species.name}-`)
     ? selectedPokemonName.slice(species.name.length + 1)
     : null;
+  // PokeAPI codifica hembra como 1 y macho como 2 en evolution_details.
   const selectedGender = selectedPokemonName.endsWith('-male') ? 2
     : selectedPokemonName.endsWith('-female') ? 1
       : null;
@@ -143,6 +161,7 @@ const getEvolutionChain = async (species, language, selectedPokemonName) => {
     const matchingForm = !isTransformation && formSuffix
       && nodeSpecies.varieties?.find(({ pokemon }) => pokemon?.name === `${nodeName}-${formSuffix}`);
     const defaultVariety = nodeSpecies.varieties?.find(({ is_default }) => is_default)?.pokemon?.name || nodeName;
+    // Las formas Mega/Gigamax conservan la forma base en la cadena, aunque la ficha muestre la transformación.
     const pokemonName = preferredPokemonName
       || (selectedSpeciesIsRoot && nodeName === species.name && !isTransformation
       ? selectedPokemonName
@@ -157,6 +176,7 @@ const getEvolutionChain = async (species, language, selectedPokemonName) => {
     const form = pokemonData.forms?.[0]
       ? await getLocalizedResource(pokemonData.forms[0].url, language)
       : null;
+    // Se inspecciona el destino y el grupo de versiones antes de decidir si una rama aplica.
     const evolutionCandidates = await Promise.all(node.evolves_to.map(async (nextNode) => {
       const nextSpecies = await getLocalizedResource(nextNode.species.url, language);
       return {
@@ -165,12 +185,14 @@ const getEvolutionChain = async (species, language, selectedPokemonName) => {
         requiredSuffix: getRegionalEvolutionSuffix(nodeSpecies, nextSpecies, nextNode.evolution_details)
       };
     }));
+    // Si hay una rama exclusiva para la región de la forma seleccionada, se omiten las ramas incompatibles.
     const hasMatchingRegionalBranch = formSuffix
       && evolutionCandidates.some(({ requiredSuffix }) => requiredSuffix === formSuffix);
     const evolvesTo = (await Promise.all(evolutionCandidates.flatMap(({ nextNode, nextSpecies, requiredSuffix }) => {
       if (requiredSuffix && formSuffix !== requiredSuffix) return null;
       if (hasMatchingRegionalBranch && !requiredSuffix) return null;
 
+      // Cuando los detalles exigen sexos distintos, se crean rutas independientes para cada forma.
       const genderValues = [...new Set(nextNode.evolution_details.map(({ gender }) => gender).filter(Boolean))].sort();
       const splitsByGender = genderValues.length > 1;
       const genderBranches = splitsByGender
@@ -206,6 +228,7 @@ const getEvolutionChain = async (species, language, selectedPokemonName) => {
   return formatNode(chainData.chain);
 };
 
+// Añade nombre traducido y tipos canónicos sin cargar el detalle completo de cada resultado.
 const formatPokemonReferences = async (references, language) => Promise.all(references.map(async (reference) => {
   if (reference.url.includes('/pokemon-species/')) {
     const species = await getLocalizedResource(reference.url, language);
@@ -226,7 +249,9 @@ const formatPokemonReferences = async (references, language) => Promise.all(refe
   };
 }));
 
+// Elige un sprite disponible con fallback ordenado entre sprite frontal y arte oficial.
 const getSprite = (sprites, shiny = false) => {
+  // Respeta el orden de preferencia para elegir una imagen disponible en los distintos juegos.
   const key = shiny ? 'front_shiny' : 'front_default';
   return sprites[key]
     || sprites.other?.['official-artwork']?.[key]
@@ -235,6 +260,7 @@ const getSprite = (sprites, shiny = false) => {
 };
 
 const formatPokemon = async (data, language = 'es') => {
+  // Agrupa la especie y habilidades porque ambas aportan datos localizados a la ficha.
   const [speciesResponse, abilities] = await Promise.all([
     getLocalizedResource(data.species.url, language),
     Promise.all(data.abilities.map(async ({ ability, is_hidden }) => {
@@ -259,11 +285,13 @@ const formatPokemon = async (data, language = 'es') => {
     }))
   ]);
 
+  // La especie aporta traducciones y variedades; el recurso Pokémon aporta stats y sprite.
   const species = speciesResponse;
   const defaultVariety = species.varieties.find(({ is_default }) => is_default)?.pokemon;
   const defaultPokemonData = defaultVariety && defaultVariety.name !== data.name
     ? await getLocalizedResource(defaultVariety.url, language)
     : data;
+  // Algunas formas no tienen arte propio en PokéAPI; se usa el sprite por defecto en ese caso.
   const fallbackSprite = getSprite(defaultPokemonData.sprites);
   const fallbackShinySprite = getSprite(defaultPokemonData.sprites, true);
   const alternatives = await Promise.all(
@@ -308,6 +336,7 @@ const formatPokemon = async (data, language = 'es') => {
     getEvolutionChain(species, language, data.name)
   ]);
 
+  // Combina relaciones defensivas de todos los tipos para calcular multiplicadores duales.
   const incomingTypeReferences = new Map();
   for (const type of typeData) {
     for (const relation of ['double_damage_from', 'half_damage_from', 'no_damage_from']) {
@@ -383,7 +412,7 @@ const getPokemonReferences = async (resource) => {
   return references.map((entry) => entry.pokemon || entry);
 };
 
-// GET /api/pokemon
+// Lista paginada o intersección paginada de los filtros activos, manteniendo el formato esperado por React.
 const getPokemons = async (req, res) => {
   try {
     const limit = Math.max(1, Math.min(Number.parseInt(req.query.limit, 10) || 10, 2000));
@@ -449,6 +478,7 @@ const getPokemonFilters = async (req, res) => {
 
     const abilityReferences = abilitiesResponse.data.results;
     const abilities = [];
+    // Limita la concurrencia para no saturar el límite por IP de PokéAPI.
     for (let index = 0; index < abilityReferences.length; index += 20) {
       const batch = abilityReferences.slice(index, index + 20);
       const localizedAbilities = await Promise.all(batch.map(async ({ name, url }) => {
@@ -468,7 +498,6 @@ const getPokemonFilters = async (req, res) => {
   }
 };
 
-// GET /api/pokemon/search?name={name}[cite: 1]
 const searchPokemonByName = async (req, res) => {
   try {
     const { name } = req.query;
@@ -485,7 +514,6 @@ const searchPokemonByName = async (req, res) => {
   }
 };
 
-// GET /api/pokemon/{id}[cite: 1]
 const getPokemonById = async (req, res) => {
   try {
     const { id } = req.params;

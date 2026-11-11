@@ -5,6 +5,7 @@ import './index.css'
 import App from './App.jsx'
 
 document.title = 'PokéDex'
+// Vite sustituye esta importación por la ruta con hash del favicon en producción.
 const favicon = document.querySelector('link[rel="icon"]') || document.createElement('link')
 favicon.rel = 'icon'
 favicon.type = 'image/png'

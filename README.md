@@ -45,6 +45,21 @@ npm run lint
 npm run build
 ```
 
+## Docker
+
+La configuración actual de Compose levanta el backend y MongoDB:
+
+```powershell
+docker compose up --build
+```
+
+- Backend: `http://localhost:3000`.
+- MongoDB: `mongodb://localhost:27017/pokedex_db`.
+- Los datos de MongoDB se conservan en el volumen `mongo_data`.
+- Para detener los servicios: `docker compose down`. Para borrar también los datos persistidos: `docker compose down -v`.
+
+**Integración pendiente:** el frontend todavía no tiene un servicio Docker. Además, su cliente HTTP apunta a `http://localhost:5000`, mientras Compose publica el backend en `3000`; Compose tampoco pasa `JWT_SECRET` al contenedor. Por lo tanto, backend y MongoDB pueden iniciar, pero el flujo completo de autenticación desde el frontend requiere alinear el puerto y pasar un secreto JWT al servicio backend. La ejecución local documentada arriba sí inicia el backend en el puerto `5000`.
+
 ## Cuenta de demostración
 
 `npm run seed:demo` crea, si aún no existe, un usuario local con una colección inicial de Pikachu y Charizard. También agrega esas entradas si el usuario demo ya existía; no borra el resto de la colección.
@@ -109,4 +124,8 @@ frontend/
 
 MongoDB almacena usuarios y, dentro de cada usuario, las entradas de `pokemonCollection` (`pokemonId`, nombre canónico y fecha de agregado). Los datos descriptivos, tipos, estadísticas, formas y sprites se consultan a PokéAPI y no se duplican en la base de datos. El caché de recursos de PokéAPI vive en memoria del proceso; se pierde al reiniciar el backend. En cargas mayores conviene espaciar las consultas para respetar el límite de PokeAPI.
 
-El cierre de sesión es stateless: elimina el token del navegador, pero no revoca tokens ya emitidos. El repositorio no incluye actualmente pruebas automatizadas, Docker ni despliegue; las pruebas se pueden ejecutar manualmente contra MongoDB y PokéAPI.
+El cierre de sesión es stateless: elimina el token del navegador, pero no revoca tokens ya emitidos. El repositorio no incluye actualmente pruebas automatizadas ni despliegue; las pruebas se pueden ejecutar manualmente contra MongoDB y PokéAPI.
+
+## Seguridad antes de compartir
+
+En la revisión del repositorio, `backend/.env` aparecía rastreado por Git. Trata el `JWT_SECRET` de ese archivo como expuesto: genera un secreto nuevo, quita el archivo del índice de Git y agrega `.env` al `.gitignore` raíz. Eliminarlo del último commit no lo borra del historial; si el repositorio ya se compartió, rota el secreto de todos modos. Conserva `backend/.env.example` solo con valores de ejemplo.

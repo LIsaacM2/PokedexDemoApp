@@ -4,7 +4,7 @@ const { getPokemons, getPokemonFilters, searchPokemonByName, getPokemonById } = 
 const { getUserCollection, addPokemonToCollection, removePokemonFromCollection } = require('../controllers/collection.controller');
 const { protect } = require('../middleware/auth.middleware');
 
-// Rutas protegidas por JWT (puedes quitar el middleware `protect` si deseas que sean públicas)
+// Todas las rutas de Pokémon y colección requieren una sesión autenticada.
 router.get('/', protect, getPokemons);
 router.get('/search', protect, searchPokemonByName);
 router.get('/filters', protect, getPokemonFilters);

@@ -1,3 +1,4 @@
+// Paleta de la tarjeta basada en colores representativos de cada tipo canónico de PokéAPI.
 const typeColors = {
   normal: '#A8A77A', fire: '#EE8130', water: '#6390F0', electric: '#F7D02C',
   grass: '#7AC74C', ice: '#96D9D6', fighting: '#C22E28', poison: '#A33EA1',
@@ -7,6 +8,7 @@ const typeColors = {
 };
 
 export default function PokemonCard({ pokemon, onSelect, displayName, highlighted }) {
+  // Para dos tipos, la diagonal representa ambos sin agregar otra etiqueta a la tarjeta.
   const colors = (pokemon.types || []).slice(0, 2).map((type) => typeColors[type] || '#475569');
   const backgroundStyle = colors.length > 1
     ? { backgroundImage: `linear-gradient(135deg, ${colors[0]} 0%, ${colors[0]} 50%, ${colors[1]} 50%, ${colors[1]} 100%)` }

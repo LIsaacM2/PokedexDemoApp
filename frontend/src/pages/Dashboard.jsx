@@ -4,33 +4,41 @@ import PokemonCard from '../components/PokemonCard';
 import PokemonModal from '../components/PokemonModal';
 import pokedexIcon from '../assets/pokedexIcon.png';
 
+// Orden natural de las generaciones, ya que el orden alfabético altera los números romanos.
 const generationOrder = [
   'generation-i', 'generation-ii', 'generation-iii', 'generation-iv', 'generation-v',
   'generation-vi', 'generation-vii', 'generation-viii', 'generation-ix'
 ];
 
 export default function Dashboard({ user, onLogout }) {
+  // Datos visibles de catálogo, sugerencias y colección persistida del usuario.
   const [pokemons, setPokemons] = useState([]);
   const [collection, setCollection] = useState([]);
   const [search, setSearch] = useState('');
   const [suggestions, setSuggestions] = useState([]);
   const [filterOptions, setFilterOptions] = useState({ types: [], abilities: [], generations: [] });
+
+  // Valores canónicos enviados al backend; el idioma solo cambia etiquetas y contenido presentado.
   const [typeFilter, setTypeFilter] = useState('');
   const [abilityFilter, setAbilityFilter] = useState('');
   const [generationFilter, setGenerationFilter] = useState('');
   const [language] = useState(() => localStorage.getItem('pokedex-language') === 'en' ? 'en' : 'es');
   const [selectedPokemon, setSelectedPokemon] = useState(null);
   const [showCollection, setShowCollection] = useState(false);
+
+  // Estados de operación para no mostrar listas obsoletas ni permitir cambios duplicados.
   const [loading, setLoading] = useState(false);
   const [collectionUpdating, setCollectionUpdating] = useState(false);
   const [error, setError] = useState('');
   const [total, setTotal] = useState(0);
   
+  // La API usa offset, mientras que la interfaz muestra el número de página.
   const [offset, setOffset] = useState(0);
   const [pageInput, setPageInput] = useState('1');
   const pokemonListRef = useRef(null);
   const limit = 10;
   const totalPages = Math.max(1, Math.ceil(total / limit));
+  // Centraliza el texto de interfaz para que todos los controles sigan el idioma elegido.
   const text = language === 'es'
     ? {
         hello: 'Hola,', logout: 'Cerrar sesión', searchPlaceholder: 'Buscar Pokémon por nombre...', search: 'Buscar',
@@ -58,6 +66,7 @@ export default function Dashboard({ user, onLogout }) {
       };
 
   useEffect(() => {
+    // Vuelve a pedir solo la página activa al cambiar offset o filtros.
     let cancelled = false;
 
     const fetchPokemons = async () => {
@@ -96,6 +105,7 @@ export default function Dashboard({ user, onLogout }) {
   }, [offset, typeFilter, abilityFilter, generationFilter, language]);
 
   useEffect(() => {
+    // Carga una vez por idioma las sugerencias y opciones localizadas de filtros.
     let cancelled = false;
 
     const loadSearchAndFilterOptions = async () => {
@@ -129,6 +139,7 @@ export default function Dashboard({ user, onLogout }) {
   }, [language]);
 
   useEffect(() => {
+    // La colección se carga aparte para no alterar el conteo ni la paginación del catálogo.
     let cancelled = false;
     api.get(`/api/pokemon/collection?lang=${language}`)
       .then(({ data }) => { if (!cancelled) setCollection(data.results); })
@@ -136,6 +147,7 @@ export default function Dashboard({ user, onLogout }) {
     return () => { cancelled = true; };
   }, [language]);
 
+  // Centraliza selección por búsqueda, tarjeta, forma alternativa o nodo evolutivo.
   const handleSelectPokemon = async (nameOrId, selectedLanguage = language) => {
     setLoading(true);
     setError('');
@@ -174,6 +186,7 @@ export default function Dashboard({ user, onLogout }) {
     window.location.reload();
   };
 
+  // Persiste el cambio y vuelve a leer MongoDB para mantener la vista como fuente de verdad.
   const handleToggleCollection = async (pokemon) => {
     const alreadySaved = collection.some((entry) => entry.id === pokemon.id);
     setCollectionUpdating(true);

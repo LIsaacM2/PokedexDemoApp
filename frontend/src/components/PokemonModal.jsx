@@ -3,6 +3,7 @@ import { useState } from 'react';
 const capitalizeFirst = (value) => value ? value.charAt(0).toUpperCase() + value.slice(1) : '';
 const formatName = (value) => value.split('-').map(capitalizeFirst).join(' ');
 
+// Aplana un árbol ramificado en rutas para mostrar cada evolución como una fila independiente.
 const collectEvolutionPaths = (node, nodes = [], conditions = []) => {
   const pathNodes = [...nodes, node];
   if (!node.evolvesTo.length) return [{ nodes: pathNodes, conditions }];
@@ -43,6 +44,7 @@ function EvolutionPath({ path, language, onSelectEvolution }) {
 }
 
 export default function PokemonModal({ pokemon, onClose, onSelectForm, onSelectEvolution, isInCollection = false, collectionUpdating = false, onToggleCollection, language = 'es' }) {
+  // Estado visual local de la forma shiny y del panel de habilidad expandido.
   const [isShiny, setIsShiny] = useState(false);
   const [expandedAbility, setExpandedAbility] = useState(null);
 
