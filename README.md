@@ -132,4 +132,4 @@ El cierre de sesión es stateless: elimina el token del navegador, pero no revoc
 
 ## Seguridad antes de compartir
 
-En la revisión del repositorio, `backend/.env` aparecía rastreado por Git. Trata el `JWT_SECRET` de ese archivo como expuesto: genera un secreto nuevo, quita el archivo del índice de Git y agrega `.env` al `.gitignore` raíz. Eliminarlo del último commit no lo borra del historial; si el repositorio ya se compartió, rota el secreto de todos modos. Conserva `backend/.env.example` solo con valores de ejemplo.
+No subas archivos `.env`; conserva en Git únicamente plantillas sin credenciales, como `backend/.env.example`. Si un secreto llegó al repositorio, primero rótalo en el servicio que lo valida (JWT, MongoDB u otro), luego deja de rastrear el `.env` y mantenlo ignorado localmente. Borrar el archivo de la última versión no elimina copias de commits anteriores; reescribir el historial es una operación adicional que debe coordinarse con quienes hayan clonado el repositorio.
